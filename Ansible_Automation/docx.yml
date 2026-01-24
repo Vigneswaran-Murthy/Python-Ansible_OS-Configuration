@@ -1,0 +1,46 @@
+Redhat Subscription   
+
+
+mala80158@gmail.com
+
+Vickie-27021993
+
+
+
+ansible all -m ping -i "localhost," -e "ansible_connection=local"   //to ping self host 
+
+sudo su - ansible 
+
+[ansible@vickieRHEL9 ~]$ ansible all -m ping -i "192.168.48.129," -e "ansible_user=root"
+192.168.48.129 | SUCCESS => {
+    "ansible_facts": {
+        "discovered_interpreter_python": "/usr/bin/python3"
+    },
+    "changed": false,
+    "ping": "pong"
+}
+//we are telling ansible user to connect as root user
+
+
+Ansible Adhoc commands: -
+
+ansible dev -i inventory.txt -m yum -a "name=httpd state=present" -b   //dev = group name -iinventory file yum=module a = arguments or parameters b=become sudo
+
+ansible dev -i inventory.txt -m service -a "name=httpd state=started" -b  //to start the service
+
+ansible dev -i inventory.txt -m copy -a "src=/root/index.html dest=/var/www/html/" -b  //to copy file from control node to managed node
+
+
+Ansible playbooks: -
+
+ansible-playbook -i inventory.txt main.yml --check //to do dry run
+
+ansible-playbook -i inventory.txt main.yml --syntax-check //to check syntax errors
+
+ansible-playbook -i inventory.txt main.yml  //to execute the playbook  in inventory i mentioned [APP]
+
+
+---------------------------------------
+
+Loop concept 
+

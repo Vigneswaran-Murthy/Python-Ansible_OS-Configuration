@@ -1,0 +1,2 @@
+[ubuntu]
+uls-op-sndk ansible_host=192.168.48.131 ansible_user=vickie ansible_password=root ansible_become=true ansible_become_password=root

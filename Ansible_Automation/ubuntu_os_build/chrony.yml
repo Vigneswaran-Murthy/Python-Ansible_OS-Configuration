@@ -1,0 +1,56 @@
+#
+# 4. Chrony Installation and Configuration
+##==================================================================================##
+- name: Install and configure Chrony NTP client
+  hosts: all
+  become: yes
+  gather_facts: yes
+  tags:
+    - chrony
+
+  tasks:
+
+    - name: Check if chronyd command exists
+      shell: "command -v chronyd"
+      register: chronyd_check
+      ignore_errors: yes
+      changed_when: false
+
+    - name: Stop chronyd service if it exists
+      systemd:
+        name: chrony
+        state: stopped
+      when: chronyd_check.rc == 0
+      ignore_errors: yes
+
+    - name: Install chrony package
+      apt:
+        name: chrony
+        state: present
+      when: ansible_os_family == "Ubuntu"
+      ignore_errors: yes
+    
+    - name: Configure Chrony servers
+      copy:
+        dest: /etc/chrony/chrony.conf
+        content: |
+          # Internal NTP servers
+          server 10.86.1.1 iburst
+          server 10.86.2.1 iburst
+        owner: root
+        group: root
+        mode: "0644"
+      register: chrony_installation
+
+    - name: Enable and restart chrony service
+      systemd:
+        name: chrony
+        enabled: yes
+        state: restarted
+      ignore_errors: yes
+
+    - name: Log chrony configuration update
+      import_tasks: log_task_status.yml
+      vars:
+        task_result: "{{ chrony_installation }}"
+        task_name: "chrony_installation"

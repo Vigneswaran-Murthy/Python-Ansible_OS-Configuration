@@ -1,0 +1,15 @@
+---
+- name: Install httpd on clients
+  hosts: APP
+  become: yes
+
+  tasks:
+    - name: Install  package
+      yum:
+        name: "{{ item }}"  //this is jinja2 template
+        state: present
+      loop:
+        - httpd
+        - mysql
+        - php
+        - unzip

@@ -1,0 +1,127 @@
+##==================================================================================##
+# PV and VG Setup (Single Disk)
+##==================================================================================##
+
+- name: LVM Setup - Create PV and VG (Single Disk)
+  hosts: all
+  become: yes
+  gather_facts: yes
+  tags:
+    - lvm_setup
+
+  vars_files:
+    - vars/vg_name.yml     # Must contain: vg_name: datavg
+
+  tasks:
+
+    - block:
+
+        #######################################################################
+        # 1. List all available disk devices
+        #######################################################################
+        - name: List available disks
+          shell: "lsblk -dn -o NAME,TYPE | awk '$2==\"disk\" {print $1}'"
+          register: disks_output
+          changed_when: false
+
+        #######################################################################
+        # 2. Select a valid disk (skip sda and sr0)
+        #######################################################################
+        - name: Select candidate disk
+          set_fact:
+            candidate_disk: "{{ disks_output.stdout_lines | reject('match', '^(sda|sr0)$') | list | first }}"
+
+        - name: Convert to /dev/<disk>
+          set_fact:
+            candidate_disk: "/dev/{{ candidate_disk }}"
+          when: candidate_disk is defined and candidate_disk|length > 0
+
+        #######################################################################
+        # 3. Skip LVM if no disk found
+        #######################################################################
+        - block:
+            - debug:
+                msg: "No available data disk found — skipping LVM setup."
+
+            - set_fact:
+                lvm_final_status:
+                  failed: false
+                  skipped: true
+                  msg: "No available data disk found — LVM setup skipped."
+          when: candidate_disk is not defined or candidate_disk|length == 0
+
+        #######################################################################
+        # 4. Check if VG already exists
+        #######################################################################
+        - name: Check if VG already exists
+          shell: "vgs {{ vg_name }} --noheadings"
+          register: vg_exists
+          changed_when: false
+          failed_when: false
+          when: candidate_disk is defined and candidate_disk|length > 0
+
+        #######################################################################
+        # 5. If VG exists → Skip LVM setup and log
+        #######################################################################
+        - block:
+            - debug:
+                msg: "VG {{ vg_name }} already exists — skipping PV/VG creation."
+
+            - set_fact:
+                lvm_final_status:
+                  failed: false
+                  skipped: true
+                  msg: "VG {{ vg_name }} already exists — no changes required."
+          when: vg_exists.rc == 0
+
+        #######################################################################
+        # 6. Create PV and VG only if VG does NOT exist
+        #######################################################################
+        - block:
+
+            - name: Check existing PVs
+              shell: "pvs --noheadings -o pv_name"
+              register: existing_pvs
+              changed_when: false
+
+            - name: Create Physical Volume if not exists
+              shell: "pvcreate {{ candidate_disk }}"
+              when: candidate_disk not in existing_pvs.stdout_lines
+              register: pvcreate_result
+              ignore_errors: yes
+
+            - name: Create Volume Group
+              shell: "vgcreate {{ vg_name }} {{ candidate_disk }}"
+              when: vg_exists.rc != 0
+              register: vgcreate_result
+              ignore_errors: yes
+
+            - name: Set LVM success status
+              set_fact:
+                lvm_final_status:
+                  failed: "{{ (pvcreate_result is defined and pvcreate_result.failed|default(false)) or
+                              (vgcreate_result is defined and vgcreate_result.failed|default(false)) }}"
+                  skipped: false
+                  msg: >
+                    {% if pvcreate_result is defined and pvcreate_result.failed|default(false) %}
+                      PV creation failed.
+                    {% elif vgcreate_result is defined and vgcreate_result.failed|default(false) %}
+                      VG creation failed.
+                    {% else %}
+                      PV/VG setup completed successfully on {{ candidate_disk }}.
+                    {% endif %}
+          when: vg_exists.rc != 0
+
+      rescue:
+        - set_fact:
+            lvm_final_status:
+              failed: true
+              skipped: false
+              msg: "LVM setup failed due to an unexpected error."
+
+      always:
+        - name: Log LVM setup task
+          import_tasks: log_task_status.yml
+          vars:
+            task_name: "LVM Setup (PV & VG)"
+            task_result: "{{ lvm_final_status }}"
