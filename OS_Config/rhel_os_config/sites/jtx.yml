@@ -1,0 +1,51 @@
+---
+# JTX site registration
+# env_letter: d|t|p (dev|test|prod)
+# os_major  : '7'|'8'|'9'
+
+- name: Build JTX command matrix
+  set_fact:
+    jtx_cmds:
+      '7':
+        d: >-
+          set -o pipefail && curl -sS --insecure
+          'https://jtx-op-sndrhcap.corp.sandisk.com:9090/register?activation_keys=rhel7-dev-quae2Eov5oosoh7p&force=true&hostgroup_id=2&ignore_subman_errors=true&location_id=5&operatingsystem_id=8&organization_id=1&update_packages=false'
+          -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoxNSwiaWF0IjoxNzQ0NzQwOTQ5LCJqdGkiOiIzM2M4NDBlNWI5NTA2ZThlZjc2OWE0YTFhYWYwNGRkMGNjNjllMjNmMTZiOGM3NzhjMzYzYzA2OGI2OTg2NmRlIiwic2NvcGUiOiJyZWdpc3RyYXRpb24jZ2xvYmFsIHJlZ2lzdHJhdGlvbiNob3N0In0.SY_0gCqqyIn6nLq4eRmmjneJjBkQ3IH_6yp9UFm6f0M' | bash
+        t: >-
+          set -o pipefail && curl -sS --insecure
+          'https://jtx-op-sndrhcap.corp.sandisk.com:9090/register?activation_keys=rhel7-test-quae2Eov5oosoh7p&force=true&hostgroup_id=2&ignore_subman_errors=true&location_id=5&operatingsystem_id=8&organization_id=1&update_packages=false'
+          -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoxNSwiaWF0IjoxNzQ0NzQwOTY4LCJqdGkiOiJlZGQxMThmMzY4NDA4NTUwYjZkM2EyZTNiNDljYzQ2YTFlMmYwNjA3NjY2ZmJkNjc3NmU1OTNlODg5MmI5OTYyIiwic2NvcGUiOiJyZWdpc3RyYXRpb24jZ2xvYmFsIHJlZ2lzdHJhdGlvbiNob3N0In0.RHAS41OSGQMBhG3HgF3I-Fhw_GmME78oQDnSfM03adI' | bash
+        p: >-
+          set -o pipefail && curl -sS --insecure
+          'https://jtx-op-sndrhcap.corp.sandisk.com:9090/register?activation_keys=rhel7-prod-quae2Eov5oosoh7p&force=true&hostgroup_id=1&ignore_subman_errors=true&location_id=5&operatingsystem_id=8&organization_id=1&update_packages=false'
+          -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoxNSwiaWF0IjoxNzQ0NzQwOTk2LCJqdGkiOiJmODc1ZTlkMTJlNWQ1NGMzNWIzMTA4N2RiYzcxMmViYTgxOTAxNGMzOTFmMmM4NjFjYTFmZjA3YTFjZDIzMjdhIiwic2NvcGUiOiJyZWdpc3RyYXRpb24jZ2xvYmFsIHJlZ2lzdHJhdGlvbiNob3N0In0.hDz5YBzLNzEkAMW6iQ5ROFGLwOdXkiZTFOGyLGqqUiM' | bash
+      '8':
+        d: >-
+          set -o pipefail && curl -sS --insecure
+          'https://jtx-op-sndrhcap.corp.sandisk.com:9090/register?activation_keys=rhel8-dev-quae2Eov5oosoh7p&force=true&hostgroup_id=2&ignore_subman_errors=true&location_id=5&operatingsystem_id=10&organization_id=1&update_packages=false'
+          -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoxNSwiaWF0IjoxNzQ0NzQxMDIwLCJqdGkiOiI3Y2UyMDg2MzE4NDFlNGZlYjgyNDFlNWQyZGNmNjk4NjI2ZmQ2Yzg1NjY3YzU3ZjEzOWUxNTI5YmFiNTU2YjE2Iiwic2NvcGUiOiJyZWdpc3RyYXRpb24jZ2xvYmFsIHJlZ2lzdHJhdGlvbiNob3N0In0.qx427VUlfcrF3gDmO4e1Nv7gYMRaMl9zkFbEhrKj4hM' | bash
+        t: >-
+          set -o pipefail && curl -sS --insecure
+          'https://jtx-op-sndrhcap.corp.sandisk.com:9090/register?activation_keys=rhel8-test-quae2Eov5oosoh7p&force=true&hostgroup_id=2&ignore_subman_errors=true&location_id=5&operatingsystem_id=10&organization_id=1&update_packages=false'
+          -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoxNSwiaWF0IjoxNzQ0NzQxMDM5LCJqdGkiOiI4MGUyMWRiZjBlZmJmYmMwMDhkMjM3MmY3ZTY2YjljYTE4Yjk0NTMyNDZiNTVjMjIwNDVhNmU3ZmY2YThlODM1Iiwic2NvcGUiOiJyZWdpc3RyYXRpb24jZ2xvYmFsIHJlZ2lzdHJhdGlvbiNob3N0In0.xJ6PS-Qf9w7Fz7q5QDQYtgJXytkjOxK1qJu-FJ6hAw0' | bash
+        p: >-
+          set -o pipefail && curl -sS --insecure
+          'https://jtx-op-sndrhcap.corp.sandisk.com:9090/register?activation_keys=rhel8-prod-quae2Eov5oosoh7p&force=true&hostgroup_id=1&ignore_subman_errors=true&location_id=5&operatingsystem_id=10&organization_id=1&update_packages=false'
+          -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoxNSwiaWF0IjoxNzQ0NzQxMDY1LCJqdGkiOiJmMDVhM2MyMTNhYTZiN2UyNThkNGZlNGRlM2U3NDcxYmUwMmMxZThjOTAxOGY2ZTM3OTQ3YjMxZjg5ZmUyNTU4Iiwic2NvcGUiOiJyZWdpc3RyYXRpb24jZ2xvYmFsIHJlZ2lzdHJhdGlvbiNob3N0In0.AyfDAGHXU24_IAEplCR9bkLztn7An9-JwU671VRh_8o' | bash
+      '9':
+        d: >-
+          set -o pipefail && curl -sS --insecure
+          'https://jtx-op-sndrhcap.corp.sandisk.com:9090/register?activation_keys=rhel9-dev-quae2Eov5oosoh7p&force=true&hostgroup_id=2&ignore_subman_errors=true&location_id=5&operatingsystem_id=15&organization_id=1&update_packages=false'
+          -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoxNSwiaWF0IjoxNzQ0NzQxMTQzLCJqdGkiOiJkZDUxMmY4ZWJkNmU3NDBiYThkZWJlMzQ4NTgxMzdmMzU3NTQ4Nzk2MjVjOWVlYzE5MjNkZjNiNGM3ZmEyNjE0Iiwic2NvcGUiOiJyZWdpc3RyYXRpb24jZ2xvYmFsIHJlZ2lzdHJhdGlvbiNob3N0In0.dq1YTz69GZtBSWUffrVIsIjFKldZ2FRM-6ThTKot8c8' | bash
+        t: >-
+          set -o pipefail && curl -sS --insecure
+          'https://jtx-op-sndrhcap.corp.sandisk.com:9090/register?activation_keys=rhel9-test-quae2Eov5oosoh7p&force=true&hostgroup_id=2&ignore_subman_errors=true&location_id=5&operatingsystem_id=15&organization_id=1&update_packages=false'
+          -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoxNSwiaWF0IjoxNzQ0NzQxMTU2LCJqdGkiOiI1MDllMjRkZDRkYzZhNDgzZGI5OTA4NmM1NzgwZWNiOTVlMGYwNzFjN2Y2N2UzOWY5Yzg2MDlhODdjOGYxNDIzIiwic2NvcGUiOiJyZWdpc3RyYXRpb24jZ2xvYmFsIHJlZ2lzdHJhdGlvbiNob3N0In0.YtBZ_8e9GmpfkbqAQ7Y-091JvoSzf1ech3oOgsUV_Qs' | bash
+        p: >-
+          set -o pipefail && curl -sS --insecure
+          'https://jtx-op-sndrhcap.corp.sandisk.com:9090/register?activation_keys=rhel9-prod-quae2Eov5oosoh7p&force=true&hostgroup_id=1&ignore_subman_errors=true&location_id=5&operatingsystem_id=15&organization_id=1&update_packages=false'
+          -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoxNSwiaWF0IjoxNzQ0NzQxMDg4LCJqdGkiOiI3N2ZmODhiZmNhNTMwOGM2Y2Y2MTllMjYyZTdjODgzZDk5NWJiMDRhYWRkM2E1MjIyYjA2NThjYmE1Yjg1OTBkIiwic2NvcGUiOiJyZWdpc3RyYXRpb24jZ2xvYmFsIHJlZ2lzdHJhdGlvbiNob3N0In0.kfjVQART554vZiwbvYhHrhdPrCDbin-z3sd1F-Zmy7A' | bash
+
+- name: Run JTX registration
+  shell: "{{ jtx_cmds[os_major][env_letter] }}"
+
