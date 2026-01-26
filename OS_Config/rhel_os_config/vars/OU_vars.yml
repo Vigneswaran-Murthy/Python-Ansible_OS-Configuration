@@ -1,1 +1,3 @@
-
+mail_to: "PDL-HCL-Linux@sandisk.com"
+mail_from: "ansible_automation@sandisk.com"
+mail_cc: "vigneswaran.murthy@sandisk.com"
