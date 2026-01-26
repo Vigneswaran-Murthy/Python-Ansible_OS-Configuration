@@ -1,1 +1,171 @@
+email_html_body: |
+          <!DOCTYPE html>
+          <html>
+          <body style="margin:0;padding:0;background-color:#eef2f6;
+                       font-family:'Segoe UI', Arial, sans-serif;">
+
+            {# ===== STATUS DETECTION (CORRECT / PERSISTENT) ===== #}
+            {% set ns = namespace(has_failed=false, has_skipped=false) %}
+            {% for l in item.ansible_facts.host_status_lines %}
+              {% set line = l | lower %}
+              {% if 'failed' in line %}
+                {% set ns.has_failed = true %}
+              {% elif 'skipped' in line %}
+                {% set ns.has_skipped = true %}
+              {% endif %}
+            {% endfor %}
+
+            <!-- Outer Wrapper -->
+            <table width="100%" cellpadding="0" cellspacing="0"
+                   style="background-color:#eef2f6;">
+              <tr>
+                <td align="center" style="padding:30px 15px;">
+
+                  <!-- Card -->
+                  <table width="760" cellpadding="0" cellspacing="0"
+                         style="background:#ffffff;border-radius:10px;
+                                box-shadow:0 6px 20px rgba(0,0,0,0.12);
+                                overflow:hidden;">
+
+                    <!-- HEADER -->
+                    <tr>
+                      <td style="background:linear-gradient(90deg,#1f2937,#374151);
+                                 padding:25px;text-align:center;">
+                        <img src="http://uls-op-millsndk.corp.sandisk.com/pxehome/SanDisk-Logo.png"
+                             alt="SanDisk" height="55"
+                             style="display:block;margin:0 auto 14px;">
+                        <div style="color:#ffffff;font-size:18px;
+                                    font-weight:600;letter-spacing:0.5px;">
+                          Ansible Playbook Task Status Summary for
+                          <br>
+                          <span style="font-size:16px;">{{ item.item }}</span>
+                        </div>
+                      </td>
+                    </tr>
+
+                    <!-- EXECUTION STATUS BANNER -->
+                    <tr>
+                      <td style="
+                        text-align:center;
+                        padding:14px;
+                        font-size:15px;
+                        font-weight:700;
+                        color:#ffffff;
+                        background-color:
+                          {% if ns.has_failed %}#dc2626
+                          {% elif ns.has_skipped %}#f59e0b
+                          {% else %}#16a34a{% endif %};
+                      ">
+                        {% if ns.has_failed %}
+                          ❌ EXECUTION STATUS : FAILED
+                        {% elif ns.has_skipped %}
+                          ⚠️ EXECUTION STATUS : SKIPPED / PARTIAL
+                        {% else %}
+                          ✅ EXECUTION STATUS : SUCCESS
+                        {% endif %}
+                      </td>
+                    </tr>
+
+                    <!-- CENTER TITLE BEFORE TABLE -->
+                    <tr>
+                      <td style="
+                        padding:22px 20px 10px;
+                        text-align:center;
+                        font-size:17px;
+                        font-weight:700;
+                        color:#111827;
+                      ">
+                        Ansible Playbook Task Status Summary for
+                        <span style="color:#2563eb;">{{ item.item }}</span>
+                      </td>
+                    </tr>
+
+                    <!-- TABLE -->
+                    <tr>
+                      <td style="padding:10px 20px 25px;">
+                        <table width="100%" cellpadding="10" cellspacing="0"
+                               style="border-collapse:collapse;
+                                      font-size:14px;
+                                      text-align:center;">
+
+                          <tr style="background-color:#f3f4f6;">
+                            <th style="border:1px solid #e5e7eb;">Task Name</th>
+                            <th style="border:1px solid #e5e7eb;">Status</th>
+                          </tr>
+
+                          {% for line in item.ansible_facts.host_status_lines %}
+                            {% set parts = line.split('\t') %}
+                            {% set status = parts[1] | default('') | lower %}
+                            {% set row_color = '#ffffff' if loop.index0 % 2 == 0 else '#f9fafb' %}
+                            <tr style="background-color:{{ row_color }};">
+                              <td style="border:1px solid #e5e7eb;">
+                                {{ parts[0] | default(line) }}
+                              </td>
+                              <td style="border:1px solid #e5e7eb;">
+                                {% if 'success' in status %}
+                                  <span style="
+                                    display:inline-block;
+                                    min-width:90px;
+                                    padding:6px 14px;
+                                    background:#d1fae5;
+                                    color:#065f46;
+                                    border-radius:18px;
+                                    font-weight:700;
+                                    font-size:13px;">
+                                    ✔ SUCCESS
+                                  </span>
+                                {% elif 'failed' in status %}
+                                  <span style="
+                                    display:inline-block;
+                                    min-width:90px;
+                                    padding:6px 14px;
+                                    background:#fee2e2;
+                                    color:#7f1d1d;
+                                    border-radius:18px;
+                                    font-weight:700;
+                                    font-size:13px;">
+                                    ✖ FAILED
+                                  </span>
+                                {% elif 'skipped' in status %}
+                                  <span style="
+                                    display:inline-block;
+                                    min-width:90px;
+                                    padding:6px 14px;
+                                    background:#ffedd5;
+                                    color:#9a3412;
+                                    border-radius:18px;
+                                    font-weight:700;
+                                    font-size:13px;">
+                                    ⚠ SKIPPED
+                                  </span>
+                                {% else %}
+                                  {{ status }}
+                                {% endif %}
+                              </td>
+                            </tr>
+                          {% endfor %}
+
+                        </table>
+                      </td>
+                    </tr>
+
+                    <!-- FOOTER -->
+                    <tr>
+                      <td style="background:#f9fafb;
+                                 padding:15px;
+                                 text-align:center;
+                                 font-size:12px;
+                                 color:#6b7280;">
+                        This is an automated email generated by Ansible.<br>
+                        Please do not reply.
+                      </td>
+                    </tr>
+
+                  </table>
+                </td>
+              </tr>
+            </table>
+
+          </body>
+          </html>
 
