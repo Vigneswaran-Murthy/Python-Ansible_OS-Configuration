@@ -1,0 +1,133 @@
+##working on RHEL Tested & Verified  ##
+
+---
+- name: SSH key setup on multiple servers
+  hosts: all
+  gather_facts: no
+  any_errors_fatal: true
+
+  vars_files:
+    - vault_passwords.yml
+
+  vars:
+    log_file: ssh_setup.log
+    ssh_key_path: "{{ lookup('env','HOME') + '/.ssh/id_rsa' }}"
+    ssh_pub_key_path: "{{ ssh_key_path }}.pub"
+
+  tasks:
+
+  # ------------------- LOCAL PREP -------------------
+
+  - name: Ensure log file exists (local)
+    delegate_to: localhost
+    file:
+      path: "{{ log_file }}"
+      state: touch
+
+  - name: Generate SSH keypair if not exists (local)
+    delegate_to: localhost
+    community.crypto.openssh_keypair:
+      path: "{{ ssh_key_path }}"
+      type: rsa
+      size: 4096
+    when: not (ssh_key_path is file and ssh_pub_key_path is file)
+
+  - name: Read SSH public key (local)
+    delegate_to: localhost
+    slurp:
+      src: "{{ ssh_pub_key_path }}"
+    register: pubkey_data
+
+  - name: Convert pubkey content to string
+    set_fact:
+      my_pubkey: "{{ pubkey_data.content | b64decode }}"
+
+  # ------------------- CHECK EXISTING SSH -------------------
+
+  - name: Check if SSH key already works
+    delegate_to: localhost
+    shell: ssh -o BatchMode=yes -o ConnectTimeout=5 root@{{ inventory_hostname }} exit
+    register: ssh_check
+    ignore_errors: true
+
+  - name: Log SSH already configured
+    delegate_to: localhost
+    lineinfile:
+      path: "{{ log_file }}"
+      line: "SKIPPED: {{ inventory_hostname }} - SSH already configured"
+    when: ssh_check.rc == 0
+
+  - name: Skip host if SSH already works
+    meta: end_host
+    when: ssh_check.rc == 0
+
+  # ------------------- PASSWORD AUTH (SAFE & STABLE) -------------------
+
+  - name: Try all passwords (secure)
+    delegate_to: localhost
+    shell: |
+      sshpass -p "{{ item }}" \
+      ssh -o StrictHostKeyChecking=no \
+          -o PreferredAuthentications=password \
+          -o NumberOfPasswordPrompts=1 \
+          -o ConnectTimeout=5 \
+          root@{{ inventory_hostname }} exit
+    register: ssh_attempts
+    loop: "{{ passwords }}"
+    loop_control:
+      label: "Password attempt"
+    ignore_errors: true
+    no_log: true
+
+  - name: Extract first successful password
+    set_fact:
+      working_password: >-
+        {{ (ssh_attempts.results
+            | selectattr('rc', 'equalto', 0)
+            | map(attribute='item')
+            | list
+            | first) }}
+    when: ssh_attempts.results | selectattr('rc','equalto',0) | list | length > 0
+    no_log: true
+
+  - name: Fail if no password worked
+    fail:
+      msg: "FAILED: {{ inventory_hostname }} - No passwords worked"
+    when: working_password is not defined
+
+  - name: Log password success
+    delegate_to: localhost
+    lineinfile:
+      path: "{{ log_file }}"
+      line: "SUCCESS LOGIN: {{ inventory_hostname }} - Password accepted"
+
+  # ------------------- COPY SSH KEY -------------------
+
+  - name: Push SSH key to remote host
+    delegate_to: localhost
+    shell: |
+      sshpass -p "{{ working_password }}" \
+      ssh -o StrictHostKeyChecking=no \
+          -o PreferredAuthentications=password \
+          -o ConnectTimeout=5 \
+          root@{{ inventory_hostname }} "
+        mkdir -p ~/.ssh
+        chmod 700 ~/.ssh
+        grep -qxF '{{ my_pubkey }}' ~/.ssh/authorized_keys || \
+          echo '{{ my_pubkey }}' >> ~/.ssh/authorized_keys
+        chmod 600 ~/.ssh/authorized_keys
+      "
+    register: key_copy
+    ignore_errors: true
+    no_log: true
+
+  - name: Fail if SSH key copy failed
+    fail:
+      msg: "FAILED: {{ inventory_hostname }} - SSH key copy failed"
+    when: key_copy.rc != 0
+
+  - name: Log successful setup
+    delegate_to: localhost
+    lineinfile:
+      path: "{{ log_file }}"
+      line: "SUCCESS SETUP: {{ inventory_hostname }} - SSH key installed"
