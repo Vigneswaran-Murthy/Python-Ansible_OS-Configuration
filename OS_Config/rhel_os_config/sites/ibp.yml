@@ -1,0 +1,48 @@
+---
+# ---------------- RHEL7 ----------------
+- name: Register RHEL7 Dev server (IBP)
+  shell: |
+    set -o pipefail && curl -sS --insecure 'https://ibp-op-sndrhcap.corp.sandisk.com:9090/register?activation_keys=rhel7-dev-quae2Eov5oosoh7p&force=true&hostgroup_id=2&ignore_subman_errors=true&location_id=4&operatingsystem_id=8&organization_id=1&update_packages=false' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoxNSwiaWF0IjoxNzQ0NzM4OTE5LCJqdGkiOiIxNDNjMmExYmRhZjI5YjQ1ZWI2YmYyZTY2MzkyYWFjNjM4ZjY1ZjgwYzZkZTU1NzViYjBlZjFlYzI4MzY4ZmUwIiwic2NvcGUiOiJyZWdpc3RyYXRpb24jZ2xvYmFsIHJlZ2lzdHJhdGlvbiNob3N0In0.WSKpKODz3g28MmLxR1VWy7KFTR-HM-zRTExUv_RtDus' | bash
+  when: (os_major | int) == 7 and env_letter == 'd'
+
+- name: Register RHEL7 Test server (IBP)
+  shell: |
+    set -o pipefail && curl -sS --insecure 'https://ibp-op-sndrhcap.corp.sandisk.com:9090/register?activation_keys=rhel7-test-quae2Eov5oosoh7p&force=true&hostgroup_id=2&ignore_subman_errors=true&location_id=4&operatingsystem_id=8&organization_id=1&update_packages=false' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoxNSwiaWF0IjoxNzQ0NzM5MTAwLCJqdGkiOiI4YjQ5NmFkYjcyNzE4MmNlMDM0ZmNlODlhMzRjNDI0ZWNlNDM0NmI4ZmI3NzI3ZDViNzE4YjU4OTI3NGU5NmU1Iiwic2NvcGUiOiJyZWdpc3RyYXRpb24jZ2xvYmFsIHJlZ2lzdHJhdGlvbiNob3N0In0.lqo-mEO5_icDFtppR-Pnlf303v-0Vi73nQ_92YTwEYw' | bash
+  when: (os_major | int) == 7 and env_letter == 't'
+
+- name: Register RHEL7 Prod server (IBP)
+  shell: |
+    set -o pipefail && curl -sS --insecure 'https://ibp-op-sndrhcap.corp.sandisk.com:9090/register?activation_keys=rhel7-prod-quae2Eov5oosoh7p&force=true&hostgroup_id=1&ignore_subman_errors=true&location_id=4&organization_id=1&update_packages=false' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoxNSwiaWF0IjoxNzQ0NzM5MjgxLCJqdGkiOiJlMDM0MjZiMTZiNTg3MTMxMWJlZWNlYzc5YTY2NWNkYjRkMjFhOGQ3YjkzYTcxNjBkNzZhNjY2ZjFiZjkzY2I1Iiwic2NvcGUiOiJyZWdpc3RyYXRpb24jZ2xvYmFsIHJlZ2lzdHJhdGlvbiNob3N0In0.UIL5SopgLQ94Yw6I4FBNP-HZOioKOdo49oZay9x6KI0' | bash
+  when: (os_major | int) == 7 and env_letter == 'p'
+
+# ---------------- RHEL8 ----------------
+- name: Register RHEL8 Dev server (IBP)
+  shell: |
+    set -o pipefail && curl -sS --insecure 'https://ibp-op-sndrhcap.corp.sandisk.com:9090/register?activation_keys=rhel8-dev-quae2Eov5oosoh7p&force=true&hostgroup_id=2&ignore_subman_errors=true&location_id=4&operatingsystem_id=10&organization_id=1&update_packages=false' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoxNSwiaWF0IjoxNzQ0NzM5MzUzLCJqdGkiOiJmOTFiM2FkYzY2MDViY2I4YzI3OTI0ZDNmMjEwNTk0N2E5NDg0M2EyNWNjOTdkNDdlYmZiNzJiZjJmOTY5MWE5Iiwic2NvcGUiOiJyZWdpc3RyYXRpb24jZ2xvYmFsIHJlZ2lzdHJhdGlvbiNob3N0In0.La3GKhIaXYTUGA0xEvsoCniqi8cxeEvNbpA9JiLSOuM' | bash
+  when: (os_major | int) == 8 and env_letter == 'd'
+
+- name: Register RHEL8 Test server (IBP)
+  shell: |
+    set -o pipefail && curl -sS --insecure 'https://ibp-op-sndrhcap.corp.sandisk.com:9090/register?activation_keys=rhel8-test-quae2Eov5oosoh7p&force=true&hostgroup_id=2&ignore_subman_errors=true&location_id=4&operatingsystem_id=10&organization_id=1&update_packages=false' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoxNSwiaWF0IjoxNzQ0NzM5MzgxLCJqdGkiOiJhNjBmYjQwNzkwZTBlZWZhY2Y0NTkwYTI4MGRjYzRkMDNiMjg5NTgxYjEwYjM4MGVkY2VkYjllY2YyZGFiOTQ0Iiwic2NvcGUiOiJyZWdpc3RyYXRpb24jZ2xvYmFsIHJlZ2lzdHJhdGlvbiNob3N0In0.CvRNvW7mcqS4llnZ9cHNmr0pBzNOODjPtBEPAeloPH4' | bash
+  when: (os_major | int) == 8 and env_letter == 't'
+
+- name: Register RHEL8 Prod server (IBP)
+  shell: |
+    set -o pipefail && curl -sS --insecure 'https://ibp-op-sndrhcap.corp.sandisk.com:9090/register?activation_keys=rhel8-prod-quae2Eov5oosoh7p&force=true&hostgroup_id=1&ignore_subman_errors=true&location_id=4&operatingsystem_id=10&organization_id=1&update_packages=false' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoxNSwiaWF0IjoxNzQ0NzM5NTA0LCJqdGkiOiJhNGM3N2U4NjU3YWJiY2FlOGI3MTYzMjRlY2MwMjg1OTNiYzkyNzg1Y2YzNDgwMWJkYjE5M2YxZjUzMWZkMDNlIiwic2NvcGUiOiJyZWdpc3RyYXRpb24jZ2xvYmFsIHJlZ2lzdHJhdGlvbiNob3N0In0.pyXPThu8hY05m8iAGLblzs3bS1SKROzS-E2MEw71MDM' | bash
+  when: (os_major | int) == 8 and env_letter == 'p'
+
+# ---------------- RHEL9 ----------------
+- name: Register RHEL9 Dev server (IBP)
+  shell: |
+    set -o pipefail && curl -sS --insecure 'https://ibp-op-sndrhcap.corp.sandisk.com:9090/register?activation_keys=rhel9-dev-quae2Eov5oosoh7p&force=true&hostgroup_id=2&ignore_subman_errors=true&location_id=4&operatingsystem_id=15&organization_id=1&update_packages=false' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoxNSwiaWF0IjoxNzQ0NzM5NTU2LCJqdGkiOiJjYzVjOWE3ZTM2MTcwY2ZiODU5NWEwNTE5ODI2OThjOTk3YWMzZDgyM2I1Y2NhMTY1ODk4Zjg1MzRhYzY2NjlhIiwic2NvcGUiOiJyZWdpc3RyYXRpb24jZ2xvYmFsIHJlZ2lzdHJhdGlvbiNob3N0In0.pcVT7h4rvt6Zoam13rWgLApW1qT6arNe0JFf6KmHk2Q' | bash
+  when: (os_major | int) == 9 and env_letter == 'd'
+
+- name: Register RHEL9 Test server (IBP)
+  shell: |
+    set -o pipefail && curl -sS --insecure 'https://ibp-op-sndrhcap.corp.sandisk.com:9090/register?activation_keys=rhel9-test-quae2Eov5oosoh7p&force=true&hostgroup_id=2&ignore_subman_errors=true&location_id=4&operatingsystem_id=15&organization_id=1&update_packages=false' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoxNSwiaWF0IjoxNzQ0NzM5NTc3LCJqdGkiOiJjZWQ0YzQ0ZTg1Yjc0MzZjODdiYjliYzM0MmFmODFiNjY3NWY3Njk2MTgzMjg2MDY1NzU0OWQxYjI5NzA1OTEzIiwic2NvcGUiOiJyZWdpc3RyYXRpb24jZ2xvYmFsIHJlZ2lzdHJhdGlvbiNob3N0In0.W6ZO7WhURxYhQgE9-3Zn5laXtoc_otlpxmfrpR4e-fA' | bash
+  when: (os_major | int) == 9 and env_letter == 't'
+
+- name: Register RHEL9 Prod server (IBP)
+  shell: |
+    set -o pipefail && curl -sS --insecure 'https://ibp-op-sndrhcap.corp.sandisk.com:9090/register?activation_keys=rhel9-prod-quae2Eov5oosoh7p&force=true&hostgroup_id=1&ignore_subman_errors=true&location_id=4&operatingsystem_id=15&organization_id=1&update_packages=false' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoxNSwiaWF0IjoxNzQ0NzM5NjE5LCJqdGkiOiI2Njk2MzE1YzViZjg0OTViY2UzOWIyYTU3M2ZmZGFiM2I4ODNkMTAwYmU1M2E1MzM2OTFhMjlhNTAxMTg1MjBmIiwic2NvcGUiOiJyZWdpc3RyYXRpb24jZ2xvYmFsIHJlZ2lzdHJhdGlvbiNob3N0In0.Cz0EqR316pH83o7bgjyo4TNLeOBhx1Gu0IUNNUdpIfc' | bash
+  when: (os_major | int) == 9 and env_letter == 'p'
