@@ -1,0 +1,49 @@
+---
+# ---------------- RHEL7 ----------------
+- name: Register RHEL7 Dev server (ULS)
+  shell: |
+    set -o pipefail && curl -sS --insecure 'https://uls-op-sndrhcap.corp.sandisk.com:9090/register?activation_keys=rhel7-dev-quae2Eov5oosoh7p&force=true&ignore_subman_errors=true&location_id=2&operatingsystem_id=8&organization_id=1&update_packages=false' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjo0LCJpYXQiOjE3NDAxNTUyNjcsImp0aSI6IjM5MWQyYzIxNTFkNWZjY2RmNmY4OWJlOWJjZWM5Zjc2MDhhN2UwODE1YTFmYWY5NzM1ZGE0ZjZmNDFlYzFlZDciLCJzY29wZSI6InJlZ2lzdHJhdGlvbiNnbG9iYWwgcmVnaXN0cmF0aW9uI2hvc3QifQ.uaQwEUIvfksPJ4uqzm6wLzJAI3vr4-6I_6_b9TBkgq0' | bash
+  when: (os_major | int) == 7 and env_letter == 'd'
+
+- name: Register RHEL7 Test server (ULS)
+  shell: |
+    set -o pipefail && curl -sS --insecure 'https://uls-op-sndrhcap.corp.sandisk.com:9090/register?activation_keys=rhel7-test-quae2Eov5oosoh7p&force=true&ignore_subman_errors=true&location_id=2&operatingsystem_id=8&organization_id=1&update_packages=false' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjo0LCJpYXQiOjE3NDAxNTUyMTIsImp0aSI6IjY5MTZmN2YxN2VkOTFjNTE3ZmNiYTBkNzYxN2ZjOTE2OGE2MGM1ZmE1MmFmODU3ODg0MTBkYjAwNmRiMDMwNzQiLCJzY29wZSI6InJlZ2lzdHJhdGlvbiNnbG9iYWwgcmVnaXN0cmF0aW9uI2hvc3QifQ.55W14XsaXkHpTuYRrRlcmSqryGEn2Un0C9CLQTW20jo' | bash
+  when: (os_major | int) == 7 and env_letter == 't'
+
+- name: Register RHEL7 Prod server (ULS)
+  shell: |
+    set -o pipefail && curl -sS --insecure 'https://uls-op-sndrhcap.corp.sandisk.com:9090/register?activation_keys=rhel7-prod-quae2Eov5oosoh7p&force=true&ignore_subman_errors=true&location_id=2&operatingsystem_id=8&organization_id=1&update_packages=false' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjo0LCJpYXQiOjE3NDAxMjc2NzEsImp0aSI6IjI0Mjk0ODdlMGQxMzRmY2Y5NTRmYWJiNTU4YjlmNmZjM2Q1ZWNlMGE3YzljNGJiY2YwNDRjNDYzN2IzMGU1YzMiLCJzY29wZSI6InJlZ2lzdHJhdGlvbiNnbG9iYWwgcmVnaXN0cmF0aW9uI2hvc3QifQ.SMHaiFBPtv83EBLKW_eqMkqfiTlAWtd74_AsRQbqxyU' | bash
+  when: (os_major | int) == 7 and env_letter == 'p'
+
+# ---------------- RHEL8 ----------------
+- name: Register RHEL8 Dev server (ULS)
+  shell: |
+    set -o pipefail && curl -sS --insecure 'https://uls-op-sndrhcap.corp.sandisk.com:9090/register?activation_keys=rhel8-dev-quae2Eov5oosoh7p&force=true&ignore_subman_errors=true&location_id=2&operatingsystem_id=10&organization_id=1&update_packages=false' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjo0LCJpYXQiOjE3NDAxNTUzMTUsImp0aSI6IjBhNzM5NDY4NDRlMDJiOGM2YzUyMDYxMTQ4YWQ3ZmY3N2I3MjgxYThjNGI4NzJmNWM2ZWFkMTQ1YWJlZWE5NGMiLCJzY29wZSI6InJlZ2lzdHJhdGlvbiNnbG9iYWwgcmVnaXN0cmF0aW9uI2hvc3QifQ.vlT3FpIwH6JB4avQqqX5uh-w6zRFQCSDlLGGg_k4Tgo' | bash
+  when: (os_major | int) == 8 and env_letter == 'd'
+
+- name: Register RHEL8 Test server (ULS)
+  shell: |
+    set -o pipefail && curl -sS --insecure 'https://uls-op-sndrhcap.corp.sandisk.com:9090/register?activation_keys=rhel8-test-quae2Eov5oosoh7p&force=true&ignore_subman_errors=true&location_id=2&operatingsystem_id=10&organization_id=1&update_packages=false' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjo0LCJpYXQiOjE3NDAxNTUzNzcsImp0aSI6ImMxYmYzYzljYjk4MzQ1ZWMwZTdjYjc5ODU5YzA3Nzk3ZmQyOTE4YTI4Y2ExMzNmYWFiYzMwODYyZjZiYmY4ZDciLCJzY29wZSI6InJlZ2lzdHJhdGlvbiNnbG9iYWwgcmVnaXN0cmF0aW9uI2hvc3QifQ.IIhsz0MHljIcviZQbW4EUqguDny8T9dkeGGxFYKlkjY' | bash
+  when: (os_major | int) == 8 and env_letter == 't'
+
+- name: Register RHEL8 Prod server (ULS)
+  shell: |
+    set -o pipefail && curl -sS --insecure 'https://uls-op-sndrhcap.corp.sandisk.com:9090/register?activation_keys=rhel8-prod-quae2Eov5oosoh7p&force=true&ignore_subman_errors=true&location_id=2&operatingsystem_id=10&organization_id=1&update_packages=false' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjo0LCJpYXQiOjE3NDAxNTU0NTUsImp0aSI6IjNjNmM1N2VmYzA3YjFjZjQ4NzYxOGNiZjVjZjg2MDgwMWNkNmZlNWRhNDgyNDY1NmI5MTU5ZmViZTZlM2FlYTYiLCJzY29wZSI6InJlZ2lzdHJhdGlvbiNnbG9iYWwgcmVnaXN0cmF0aW9uI2hvc3QifQ.KnuLDuwlLD5QAMR_u949y5xhueB9BFUSk8rAxdTwK6Q' | bash
+  when: (os_major | int) == 8 and env_letter == 'p'
+
+# ---------------- RHEL9 ----------------
+- name: Register RHEL9 Dev server (ULS)
+  shell: |
+    set -o pipefail && curl -sS --insecure 'https://uls-op-sndrhsat.corp.sandisk.com/register?activation_keys=rhel9-dev-quae2Eov5oosoh7p&force=true&ignore_subman_errors=true&location_id=2&operatingsystem_id=5&organization_id=1&update_packages=false' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjo0LCJpYXQiOjE3NDA0MTUxMzMsImp0aSI6IjMwNzljNjY2ODVlZTc1N2ViNTY0MzFlMzg0MjhlNjU2ZjgxNmU0ZDU5NmI3YjcxYzQwNTAyZjZkMmI2N2NiMWUiLCJzY29wZSI6InJlZ2lzdHJhdGlvbiNnbG9iYWwgcmVnaXN0cmF0aW9uI2hvc3QifQ.lsfyi-QTBRwYbnXETsdQn1wreR2W8ucyEbBzzSqi1Mc' | bash
+  when: (os_major | int) == 9 and env_letter == 'd'
+
+- name: Register RHEL9 Test server (ULS)
+  shell: |
+    set -o pipefail && curl -sS --insecure 'https://uls-op-sndrhsat.corp.sandisk.com/register?activation_keys=rhel9-test-quae2Eov5oosoh7p&force=true&ignore_subman_errors=true&location_id=2&operatingsystem_id=5&organization_id=1&update_packages=false' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjo0LCJpYXQiOjE3NDA0MTUxODMsImp0aSI6ImZlZjkxNDRhNDVkMzg5NjE2NTdhYWI2ZDdhZmVhNWU5MWNkZWNkZjE0OTQ2YmVhNWU0NDY3ZDNiNDM1NDMyZmMiLCJzY29wZSI6InJlZ2lzdHJhdGlvbiNnbG9iYWwgcmVnaXN0cmF0aW9uI2hvc3QifQ.b7h_f7Ga5wLdFseCHZvwPBom00Y-tpG75678ZEwD518' | bash
+  when: (os_major | int) == 9 and env_letter == 't'
+
+- name: Register RHEL9 Prod server (ULS)
+  shell: |
+    set -o pipefail && curl -sS --insecure 'https://uls-op-sndrhsat.corp.sandisk.com/register?activation_keys=rhel9-prod-quae2Eov5oosoh7p&force=true&ignore_subman_errors=true&location_id=2&operatingsystem_id=5&organization_id=1&update_packages=false' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjo0LCJpYXQiOjE3NDA0MTUyMjUsImp0aSI6ImVjNjgzNDNiNWFjZTMxMjY0NDFjZjY0ZjA5NTY2YTJhMTM5NTU5MzNjODI0MmM5NDA1Y2FjNDc2YjkyNDk0ZGQiLCJzY29wZSI6InJlZ2lzdHJhdGlvbiNnbG9iYWwgcmVnaXN0cmF0aW9uI2hvc3QifQ.3NFAmb1TrPe_eZLA-YPkrlhytc9LjSb7B83dUPrCFhU' | bash
+  when: (os_major | int) == 9 and env_letter == 'p'
+
