@@ -1,0 +1,165 @@
+---
+- name: Production OS Update with Audit, Timeout & Final Status
+  hosts: all
+  become: true
+  gather_facts: no
+  serial: 1   # VERY IMPORTANT: avoids yum/dnf & LVM lock issues
+
+  vars:
+    audit_dir: /tmp/log/os_update_audit
+    yum_timeout: 1800     # 30 minutes
+    rpm_timeout: 60
+
+  tasks:
+
+    # ==========================================================
+    # 0. START TIME
+    # ==========================================================
+    - name: Capture update start time
+      set_fact:
+        update_start_time: "{{ lookup('pipe', 'date \"+%Y-%m-%d %H:%M:%S\"') }}"
+
+    # ==========================================================
+    # 1. PRE-UPDATE SNAPSHOT
+    # ==========================================================
+    - name: Ensure audit directory exists on client
+      file:
+        path: "{{ audit_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Capture pre-update package list
+      command: >
+        timeout {{ rpm_timeout }}
+        rpm -qa --qf '%{NAME} %{VERSION}-%{RELEASE} %{ARCH}\n'
+      register: pre_pkgs
+      changed_when: false
+
+    - name: Capture pre-update package count
+      shell: timeout {{ rpm_timeout }} rpm -qa | wc -l
+      register: pre_pkg_count
+      changed_when: false
+
+    - name: Save pre-update package snapshot
+      copy:
+        dest: "{{ audit_dir }}/packages_before.txt"
+        content: "{{ pre_pkgs.stdout }}"
+
+    # ==========================================================
+    # 2. YUM / DNF UPDATE WITH TIMEOUT
+    # ==========================================================
+    - name: Run yum update with timeout
+      dnf:
+        name: "*"
+        state: latest
+        update_cache: yes
+      async: "{{ yum_timeout }}"
+      poll: 15
+      register: yum_update
+
+    # ==========================================================
+    # 3. POST-UPDATE SNAPSHOT
+    # ==========================================================
+    - name: Capture post-update package list
+      command: >
+        timeout {{ rpm_timeout }}
+        rpm -qa --qf '%{NAME} %{VERSION}-%{RELEASE} %{ARCH}\n'
+      register: post_pkgs
+      changed_when: false
+
+    - name: Capture post-update package count
+      shell: timeout {{ rpm_timeout }} rpm -qa | wc -l
+      register: post_pkg_count
+      changed_when: false
+
+    - name: Save post-update package snapshot
+      copy:
+        dest: "{{ audit_dir }}/packages_after.txt"
+        content: "{{ post_pkgs.stdout }}"
+
+    # ==========================================================
+    # 4. PACKAGE DIFF CALCULATION
+    # ==========================================================
+    - name: Calculate installed packages
+      set_fact:
+        installed_pkgs: "{{ post_pkgs.stdout_lines | difference(pre_pkgs.stdout_lines) }}"
+
+    - name: Calculate removed packages
+      set_fact:
+        removed_pkgs: "{{ pre_pkgs.stdout_lines | difference(post_pkgs.stdout_lines) }}"
+
+    - name: Calculate upgraded packages
+      set_fact:
+        upgraded_pkgs: >-
+          {{
+            (
+              pre_pkgs.stdout_lines
+              | map('regex_replace', ' .*$','')
+              | list
+            )
+            | intersect
+            (
+              post_pkgs.stdout_lines
+              | map('regex_replace', ' .*$','')
+              | list
+            )
+          }}
+
+    # ==========================================================
+    # 5. SAVE DIFF RESULTS
+    # ==========================================================
+    - name: Save installed packages list
+      copy:
+        dest: "{{ audit_dir }}/installed_packages.txt"
+        content: |
+          {{ installed_pkgs | join('\n') if installed_pkgs | length > 0 else 'None' }}
+
+    - name: Save removed packages list
+      copy:
+        dest: "{{ audit_dir }}/removed_packages.txt"
+        content: |
+          {{ removed_pkgs | join('\n') if removed_pkgs | length > 0 else 'None' }}
+
+    - name: Save upgraded packages list
+      copy:
+        dest: "{{ audit_dir }}/upgraded_packages.txt"
+        content: |
+          {{ upgraded_pkgs | join('\n') if upgraded_pkgs | length > 0 else 'None' }}
+
+    # ==========================================================
+    # 6. FINAL STATUS CALCULATION
+    # ==========================================================
+    - name: Capture update end time
+      set_fact:
+        update_end_time: "{{ lookup('pipe', 'date \"+%Y-%m-%d %H:%M:%S\"') }}"
+
+    - name: Determine final update status
+      set_fact:
+        final_status: "{{ 'FAILED' if yum_update is failed else 'SUCCESS' }}"
+
+    # ==========================================================
+    # 7. FINAL STATUS LOG (AUTHORITATIVE)
+    # ==========================================================
+    - name: Write final update status log
+      copy:
+        dest: "{{ audit_dir }}/final_status.log"
+        content: |
+          ================= FINAL OS UPDATE STATUS =================
+          Host               : {{ inventory_hostname }}
+          Status             : {{ final_status }}
+
+          Start Time         : {{ update_start_time }}
+          End Time           : {{ update_end_time }}
+
+          Packages Before    : {{ pre_pkg_count.stdout }}
+          Packages After     : {{ post_pkg_count.stdout }}
+
+          Installed Packages : {{ installed_pkgs | length }}
+          Removed Packages   : {{ removed_pkgs | length }}
+          Upgraded Packages  : {{ upgraded_pkgs | length }}
+
+          Yum Changed        : {{ yum_update.changed | default(false) }}
+          Yum Failed         : {{ yum_update.failed | default(false) }}
+
+          Audit Directory    : {{ audit_dir }}
+          ==========================================================
