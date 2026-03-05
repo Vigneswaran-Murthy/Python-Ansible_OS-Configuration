@@ -1,1 +1,1295 @@
+# ---
 
+# ########################################################################
+# # AUTHOR: Vigneswaran Murthy
+# # VERSION: 1.1
+# # CREATED_ON: 2025-12-12
+# ########################################################################
+
+# - name: Collect executor name 
+#   hosts: localhost
+#   gather_facts: no
+#   run_once: true
+
+#   vars_prompt:
+#     - name: executor_name
+#       prompt: "Enter your name (execution owner)"
+#       private: no
+#       default: ""
+
+#   tasks:
+#     - name: Validate executor name is provided
+#       assert:
+#         that:
+#           - executor_name | trim | length > 0
+#         fail_msg: >
+#           ❌ Execution stopped.
+#           Executor name is mandatory. Please rerun and enter your name.
+
+#     - name: Save executor name globally
+#       set_fact:
+#         playbook_executor: "{{ executor_name | trim }}"
+
+# - import_playbook: vars/validate_playbook.yml
+#   vars:
+#     #target_playbook: "{{ lookup('env','PWD') }}/data/automation/os_config/ubuntu_os_config/main.yml"
+#     target_playbook: "{{ lookup('env') }}/data/automation/os_config/ubuntu_os_config/main.yml"
+
+########################################################################
+# AUTHOR: Vigneswaran Murthy
+# VERSION: 1.1
+# CREATED_ON: 2025-12-12
+########################################################################
+
+- name: Collect executor name 
+  hosts: localhost
+  gather_facts: no
+  run_once: true
+
+  vars_prompt:
+    - name: executor_name
+      prompt: "Enter your name (execution owner)"
+      private: no
+      default: ""
+
+
+  tasks:
+    - name: Validate executor name is provided
+      assert:
+        that:
+          - executor_name | trim | length > 0
+        fail_msg: >
+          ❌ Execution stopped.
+          Executor name is mandatory. Please rerun and enter your name.
+
+    - name: Save executor name globally
+      set_fact:
+        playbook_executor: "{{ executor_name | trim }}"
+       
+#- import_playbook: "{{ playbook_dir }}/vars/validate_playbook.yml"
+- import_playbook: "{{ playbook_dir }}/validate_playbook.yml"
+  vars:
+    target_playbook: "{{ playbook_dir }}/main.yml"
+    expected_path: "/data/automation/os_config/ubuntu_os_config/main.yml"
+
+# ----------------------------
+# 1️ Root Password Change
+# ----------------------------
+- name: Change root password
+  hosts: all
+  become: yes
+  gather_facts: no
+  tags:
+    - root
+
+  vars_files:
+    - vars/root_password.yml
+
+  tasks:
+    - name: Set root password
+      user:
+        name: root
+        password: "{{ root_password_plain | password_hash('sha512') }}"
+      register: root_pw_result
+      ignore_errors: yes
+
+    - name: Log root password change
+      import_tasks: log_task_status.yml
+      vars:
+        task_result: "{{ root_pw_result }}"
+        task_name: "Root password change"
+
+- name: 2. Change system hostname
+  hosts: all
+  become: yes
+  gather_facts: no
+  tags: [hostname]
+  tasks:
+    - block:
+        - name: Set new hostname using inventory name
+          hostname:
+            name: "{{ inventory_hostname }}"
+          register: hostname_result
+          failed_when: false
+      rescue:
+        - name: Mark hostname change as failed
+          set_fact:
+            hostname_result:
+              failed: true
+              msg: "Hostname change failed for {{ inventory_hostname }}"
+      always:
+        - name: Log hostname change
+          import_tasks: log_task_status.yml
+          vars:
+            task_result: "{{ hostname_result }}"
+            task_name: "hostname change"
+          ignore_errors: yes
+
+########################################################################
+### Update Resolv.conf file for ubuntu servers 
+#######################################################################
+
+- name: Custom resolv.conf on Ubuntu (safe)
+  hosts: all
+  become: yes
+  gather_facts: yes
+  tags: resolv
+
+  vars:
+    dns_servers: |
+      search sandisk.com corp.sandisk.com
+      nameserver 10.86.1.1
+      nameserver 10.86.2.1
+
+  tasks:
+
+    - name: Remove existing resolv.conf
+      file:
+        path: /etc/resolv.conf
+        state: absent
+
+    - name: Deploy custom resolv.conf
+      copy:
+        dest: /etc/resolv.conf
+        content: "{{ dns_servers }}"
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Verify resolv.conf
+      command: cat /etc/resolv.conf
+      register: resolv_output
+      changed_when: false
+
+    - debug:
+        msg: "{{ resolv_output.stdout }}"
+
+    - name: Add immutable bit to /etc/resolv.conf (Ubuntu only)
+      command: chattr +i /etc/resolv.conf
+      when: ansible_distribution == "Ubuntu"
+      ignore_errors: yes
+      failed_when: false
+      become: yes
+
+    - name: Verify resolv.conf content
+      command: cat /etc/resolv.conf
+      register: resolv_output
+      changed_when: false
+
+    - name: Print resolv.conf
+      debug:
+        msg: "{{ resolv_output.stdout }}"
+
+    - name: Add the result to the Log files 
+      import_tasks: log_task_status.yml
+      vars:
+            task_result: "{{ resolv_results }}"
+            task_name:  Update resolv.conf
+            ignore_errors: yes
+
+
+
+# ----------------------------
+# 6. Timezone Configuration
+# ----------------------------
+
+- name: Configure system timezone based on hostname
+  hosts: all
+  become: yes
+  tags:
+    - timezone
+  vars:
+    timezones:
+      ULS: "America/Los_Angeles"
+      USE: "America/Los_Angeles"
+      USS: "America/Los_Angeles"
+      USG: "America/Los_Angeles"
+      UIM: "America/Los_Angeles"
+      ULF:  "America/Los_Angeles"
+      TBM: "Asia/Bangkok"
+      TBB: "Asia/Bangkok"
+      TPT: "Asia/Bangkok"
+      IKY: "Asia/Jerusalem"
+      CSJ: "Asia/Shanghai"
+      CSS: "Asia/Shanghai"
+      CSF: "Asia/Shanghai"
+      IOI: "Asia/Jerusalem"
+      IBP: "Asia/Kolkata"
+      IBN: "Asia/Kolkata" ##added new manually
+      IBS: "Asia/Kolkata"
+      IBV: "Asia/Kolkata"
+      IBT: "Asia/Kolkata"
+      KSG: "Asia/Seoul"
+      MSK: "Asia/Kuala_Lumpur"
+      MJP: "Asia/Kuala_Lumpur"
+      MPP: "Asia/Kuala_Lumpur"
+      MPL: "Asia/Kuala_Lumpur"
+      MPS: "Asia/Kuala_Lumpur"
+      PBT: "Asia/Manila"
+      JAN: "Asia/Tokyo"
+      JFK: "Asia/Tokyo"
+      JOK: "Asia/Tokyo"
+      JOM: "Asia/Tokyo"
+      JTK: "Asia/Tokyo"
+      JON: "Asia/Tokyo"
+      JYU: "Asia/Tokyo"
+      JOO: "Asia/Tokyo"
+      JTY: "Asia/Tokyo"
+      JYY: "Asia/Tokyo"
+      IBH: "Asia/Kolkata"
+      
+      
+  ignore_errors: yes
+
+  tasks:
+    - name: Detect site code from hostname
+      set_fact:
+        site_code: "{{ item }}"
+      when: inventory_hostname | upper is search(item)
+      loop: "{{ timezones.keys() }}"
+      ignore_errors: yes
+
+    - name: Fail if no site code detected
+      set_fact:
+        tz_result:
+          failed: true
+          msg: "No matching location code found in {{ inventory_hostname }}"
+      ignore_errors: yes
+
+    - name: Set timezone
+      community.general.timezone:
+        name: "{{ timezones[site_code] }}"
+      register: tz_result
+      when: site_code is defined
+      ignore_errors: true
+
+    - name: Log timezone task
+      import_tasks: log_task_status.yml
+      vars:
+        task_result: "{{ tz_result }}"
+        task_name: "Timezone Change ({{ site_code | default('N/A') }} → {{ timezones[site_code] | default('Unknown') }})"
+
+
+#########################################################################################
+# 7. Chrony & Mailutils installation 
+#########################################################################################
+
+- name: Install and configure Chrony
+  hosts: all
+  become: yes
+  gather_facts: yes
+  tags: [chrony]
+
+  vars:
+    chrony_cfg: /etc/chrony/chrony.conf
+    chrony_servers:
+      - 10.86.1.1
+      - 10.86.2.1
+
+  tasks:
+
+    ##################################################################
+    # INSTALL PACKAGES 
+    ##################################################################
+    - block:
+
+        - name: Install Chrony and Mailutils
+          apt:
+            name:
+              - chrony
+              - mailutils
+            state: present
+            lock_timeout: 300   
+          register: chrony_install
+          retries: 2
+          delay: 20
+          until: chrony_install is succeeded
+
+        - name: Set chrony status success
+          set_fact:
+            chrony_status: "SUCCESS"
+
+      rescue:
+
+        - name: Set chrony status failed
+          set_fact:
+            chrony_status: "FAILED"
+
+        - name: Debug failure reason
+          debug:
+            msg: "{{ chrony_install.msg | default('Package installation failed') }}"
+
+    ##################################################################
+    # CONFIGURATION 
+    ##################################################################
+    - name: Configure Chrony servers
+      blockinfile:
+        path: "{{ chrony_cfg }}"
+        marker: "# {mark} ANSIBLE MANAGED CHRONY SERVERS"
+        block: |
+          {% for server in chrony_servers %}
+          server {{ server }} iburst
+          {% endfor %}
+      when: chrony_status == "SUCCESS"
+      notify: Restart chrony
+
+    - name: Ensure Chrony service running
+      systemd:
+        name: chrony
+        state: started
+        enabled: yes
+      when: chrony_status == "SUCCESS"
+
+    ##################################################################
+    # LOGGING 
+    ##################################################################
+    - name: Log chrony installation result
+      import_tasks: log_task_status.yml
+      vars:
+        task_result: "{{ chrony_status }}"
+        task_name: "chrony setup"
+      ignore_errors: yes
+
+  handlers:
+    - name: Restart chrony
+      systemd:
+        name: chrony
+        state: restarted
+
+
+ ##----------------------------------------------------------------------------------##
+ # Check MK Agent Installation 
+ ##----------------------------------------------------------------------------------##
+
+- name: Install and configure Checkmk agent (Ubuntu/Debian)
+  hosts: all
+  become: yes
+  gather_facts: yes
+  tags: [check-mk] 
+
+  tasks:
+
+    ###########################################################################
+    # 1. Verify package exists on controller
+    ###########################################################################
+    - name: Verify Checkmk package exists on controller
+      stat:
+        path: "{{ playbook_dir }}/Packages/check-mk-agent_2.3.0p30-1_all.deb"
+      delegate_to: localhost
+      register: deb_file
+      ignore_errors: yes
+
+    - name: Fail if Checkmk package is missing
+      fail:
+        msg: "ERROR: Checkmk agent .deb file not found on controller!"
+      when: not deb_file.stat.exists
+      ignore_errors: yes
+
+    ###########################################################################
+    # 2. Copy .deb file to remote host
+    ###########################################################################
+    - name: Copy Checkmk agent package to remote host
+      copy:
+        src: "{{ playbook_dir }}/Packages/check-mk-agent_2.3.0p30-1_all.deb"
+        dest: /tmp/check-mk-agent_2.3.0p30-1_all.deb
+        mode: '0644'
+      register: copy_status
+      ignore_errors: yes
+
+    ###########################################################################
+    # 3. Install the Checkmk agent
+    ###########################################################################
+
+    - name: Wait for apt lock to be released
+      shell: |
+        while fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do
+          sleep 40
+        done
+      changed_when: false
+
+    - name: Install Checkmk agent from local deb
+      apt:
+        deb: /tmp/check-mk-agent_2.3.0p30-1_all.deb
+      register: install_status
+      ignore_errors: yes
+
+    ###########################################################################
+    # 4. Enable and start the Checkmk socket
+    ###########################################################################
+    - name: Enable Checkmk systemd socket
+      systemd:
+        name: check-mk-agent.socket
+        enabled: yes
+        state: started
+      ignore_errors: yes  
+
+    ###########################################################################
+    # 5. Validate socket status
+    ###########################################################################
+    - name: Check Checkmk socket active state
+      command: systemctl is-active check-mk-agent.socket
+      register: socket_status
+      ignore_errors: yes
+
+    - name: Display socket status
+      debug:
+        msg: "Checkmk socket status: {{ socket_status.stdout }}"
+      ignore_errors: yes
+
+    ###########################################################################
+    # 6. Validate port 6556 is listening
+    ###########################################################################
+    - name: Check if Checkmk port 6556 is listening
+      command: ss -tlnp
+      register: port_status
+      ignore_errors: yes
+
+    - name: Display port 6556 status
+      debug:
+        msg: >
+          {{ 'Port 6556 is LISTENING' 
+             if (port_status.stdout is search('6556')) 
+             else 'Port 6556 is NOT listening' }}
+      ignore_errors: yes       
+
+    ###########################################################################
+    # 7. Final status message
+    ###########################################################################
+    - name: Final status
+      debug:
+        msg: >
+          SUCCESS: Checkmk agent installed and socket active on {{ inventory_hostname }}
+      ignore_errors: yes
+
+    ###########################################################################
+    # 8. Logging 
+    ###########################################################################
+    - import_tasks: log_task_status.yml
+      vars:
+        task_result: "{{ check-mk_install }}"
+        task_name: "Checkmk Agent Install"
+      ignore_errors: yes       
+
+############################################################################
+# 8. Falcon Sensor Installation 
+###########################################################################
+- name: 8. Falcon Sensor Installation 
+  hosts: all
+  become: yes
+  tags: [falcon]
+
+  tasks:
+
+    ###########################################################################
+    # 1. Verify Falcon .deb exists on controller
+    ###########################################################################
+    - name: Verify Falcon Sensor .deb exists on controller
+      stat:
+        path: "{{ playbook_dir }}/Packages/falcon-sensor_7.20.17306.deb"
+      delegate_to: localhost
+      register: falcon_deb_file
+      ignore_errors: yes
+
+    - name: Fail if Falcon Sensor .deb is missing
+      fail:
+        msg: "ERROR: Falcon sensor .deb file not found on controller!"
+      when: not falcon_deb_file.stat.exists
+      ignore_errors: yes
+
+    ###########################################################################
+    # 2. Stop service & clean old files
+    ###########################################################################
+    - name: Stop falcon-sensor service if running
+      systemd:
+        name: falcon-sensor
+        state: stopped
+      ignore_errors: yes
+
+    - name: Remove old Falcon Registry file
+      file:
+        path: /opt/CrowdStrike/Registry.bin
+        state: absent
+      ignore_errors: yes
+
+    - name: Remove old Falcon C-* files
+      shell: rm -f /opt/CrowdStrike/C-*
+      args:
+        warn: false
+      ignore_errors: yes
+
+    ###########################################################################
+    # 3. Copy Falcon Sensor package
+    ###########################################################################
+    - name: Copy Falcon Sensor package to remote host
+      copy:
+        src: "{{ playbook_dir }}/Packages/falcon-sensor_7.20.17306.deb"
+        dest: /tmp/falcon-sensor_7.20.17306.deb
+        mode: '0644'
+      register: falcon_copy
+      ignore_errors: yes
+
+    ###########################################################################
+    # 4. Install Falcon Sensor
+    ###########################################################################
+    - name: Install Falcon Sensor from local .deb
+      apt:
+        deb: /tmp/falcon-sensor_7.20.17306.deb
+      register: falcon_install
+      ignore_errors: yes
+
+    ###########################################################################
+    # 5. Configure CID
+    ###########################################################################
+       
+    - name: Configure Falcon Customer ID (CID)
+      command: /opt/CrowdStrike/falconctl -s --cid=06C18613D2124D6CA8757655E830126E-83 -f
+      register: falcon_cid
+      ignore_errors: yes
+
+    - name: Verify Falcon CID configuration
+      command: /opt/CrowdStrike/falconctl -g --cid
+      register: falcon_cid_check
+      ignore_errors: yes
+
+    - name: Display Falcon CID
+      debug:
+        msg: "Falcon CID: {{ falcon_cid_check.stdout | default('Unable to read CID') }}"
+
+
+    ###########################################################################
+    # 6. Enable & start service
+    ###########################################################################
+    - name: Enable and start falcon-sensor
+      systemd:
+        name: falcon-sensor
+        state: started
+        enabled: yes
+      register: falcon_svc
+      ignore_errors: yes
+
+    ###########################################################################
+    # 7. Validate service + process
+    ###########################################################################
+    - name: Check falcon-sensor service status
+      command: systemctl is-active falcon-sensor
+      register: falcon_svc_status
+      ignore_errors: yes
+
+    - name: Verify falcon-sensor process is running
+      shell: pgrep -fl falcon-sensor
+      register: falcon_process
+      ignore_errors: yes
+
+    ###########################################################################
+    # 8. Validate ports/network
+    ###########################################################################
+    - name: Check Falcon network connections
+      shell: ss -tupan | grep -i crowdstrike
+      register: falcon_net
+      ignore_errors: yes
+      
+    ###########################################################################
+    # 9. Final Result
+    ###########################################################################
+    - name: Summary
+      debug:
+        msg: |
+          Falcon Sensor installed successfully
+          Service: {{ falcon_svc_status.stdout }}
+          Process: {{ falcon_process.stdout | default('not running') }}
+          Network: {{ falcon_net.stdout | default('no active connections yet') }}
+
+    ###########################################################################
+    # 10. Logging (your existing task)
+    ###########################################################################
+    - import_tasks: log_task_status.yml
+      vars:
+        task_result: "{{ falcon_install }}"
+        task_name: "Falcon Sensor Install"
+      ignore_errors: yes
+
+
+- name: 5. Postfix Installation and Configuration
+  hosts: all
+  become: yes
+  gather_facts: yes
+  tags: [postfix]
+
+  vars:
+    postfix_main_cf: /etc/postfix/main.cf
+    backup_date: "{{ ansible_date_time.date }}"
+
+  tasks:
+
+    - name: Wait for apt lock to be released
+      shell: |
+        while fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do
+          sleep 40
+        done
+      changed_when: false  
+
+    - name: Install Postfix package (Debian/Ubuntu)
+      apt:
+        name: postfix
+        state: present
+        update_cache: yes
+      when: ansible_facts.os_family == "Debian"
+      register: postfix_install_result
+      ignore_errors: yes
+
+    - name: Check if main.cf exists
+      stat:
+        path: "{{ postfix_main_cf }}"
+      register: postfix_cf_stat
+      ignore_errors: yes
+
+    - name: Backup existing main.cf (if present)
+      copy:
+        src: "{{ postfix_main_cf }}"
+        dest: "{{ postfix_main_cf }}.bak.{{ backup_date }}"
+        remote_src: yes
+      when: postfix_cf_stat.stat.exists
+      register: postfix_backup_result
+      ignore_errors: yes
+
+    - name: Create new main.cf
+      copy:
+        dest: "{{ postfix_main_cf }}"
+        content: |-
+          myhostname = {{ inventory_hostname }}
+          myorigin = /etc/mailname
+          mydestination = $myhostname, localhost.$mydomain, localhost
+          mynetworks = 127.0.0.0/8
+
+          # Relay settings
+          relayhost = [mailrelay.sandisk.com]:25
+          smtp_sasl_auth_enable = no
+          smtp_use_tls = no
+          smtp_tls_security_level = none
+
+          # mailbox and queue settings
+          home_mailbox = Maildir/
+          mailbox_command =
+
+          # Performance and security
+          smtpd_banner = $myhostname ESMTP
+          biff = no
+          append_dot_mydomain = no
+          readme_directory = no
+          compatibility_level = 2
+
+          # Logging and access control
+          smtpd_recipient_restrictions = permit_mynetworks, reject_unauth_destination
+        owner: root
+        group: root
+        mode: '0644'
+      register: postfix_new_cfg_result
+      ignore_errors: yes
+
+    - name: Enable and restart Postfix service
+      systemd:
+        name: postfix
+        enabled: yes
+        state: restarted
+      when: postfix_install_result is defined
+      register: postfix_service_result
+      ignore_errors: yes
+
+    - name: Log Postfix configuration update
+      import_tasks: log_task_status.yml
+      vars:
+        task_result: "{{ postfix_new_cfg_result }}"
+        task_name: "postfix_config"
+      ignore_errors: yes
+
+    - name: Debug Postfix summary
+      debug:
+        msg: "postfix installed: {{ postfix_install_result is defined and postfix_install_result.changed }}"
+      ignore_errors: yes
+
+
+
+
+########################################################################################
+# 9 . Common utility package installation 
+########################################################################################
+
+- name: 9. Install common utilities
+  hosts: all
+  become: yes
+  gather_facts: yes
+  tags: [common_utils]
+
+  tasks:
+
+    ###########################################################################
+    # 1. Ensure apt cache is updated
+    ###########################################################################
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+      when: ansible_os_family == "Debian"
+      register: apt_update
+      ignore_errors: yes
+
+    ###########################################################################
+    # 2. Install core utility packages
+    ###########################################################################
+    - name: Install common utility packages
+      apt:
+        name:
+          - vim
+          - curl
+          - wget
+          - net-tools
+          - htop
+          - unzip
+          - git
+          - sysstat
+          - openssl
+          - bzip2
+          - iproute2
+          - lsof
+          - nfs-common
+          - pcp
+          - rsync
+          - screen
+          - tcpdump
+          - telnet
+          - tmux
+          - traceroute
+          - zip
+          - zsh
+          - ksh
+        state: present
+      when: ansible_os_family == "Debian"
+      register: common_pkg_install
+      ignore_errors: yes
+
+    ###########################################################################
+    # 3. Verify installation 
+    ###########################################################################
+    - name: Verify core utilities installed
+      shell: |
+        which vim
+        which curl
+        which wget
+        which git
+      register: utility_check
+      ignore_errors: yes
+
+    - name: Display utility installation check result
+      debug:
+        msg: "Utility Check Output: {{ utility_check.stdout | default('Utilities not found') }}"
+      ignore_errors: yes
+
+    
+    ###########################################################################
+    # 5. Final Summary
+    ###########################################################################
+    - name: Summary of common utilities installation
+      debug:
+        msg: |
+          Installed common utility packages.
+          Verification: {{ utility_check.stdout | default('N/A') }}
+      ignore_errors: yes
+
+    ###########################################################################
+    # 6. Central Logging
+    ###########################################################################
+    - import_tasks: log_task_status.yml
+      vars:
+        task_result: "{{ common_pkg_install }}"
+        task_name: "common_utility_package"
+      ignore_errors: yes
+
+
+##==================================================================================##
+# PV and VG Setup (Single Disk)
+##==================================================================================##
+
+# ----------------------------
+# LVM Setup - Safe PV & VG Creation (Single Disk)
+# ----------------------------
+
+- name: LVM Setup - Create PV and VG safely
+  hosts: all
+  become: true
+  gather_facts: false
+  tags:
+    - lvm
+
+  vars_files:
+    - vars/vg_name.yml   # vg_name: datavg
+
+  tasks:
+
+    - block:
+
+        ####################################################################
+        # 1. LIST ALL DISKS
+        ####################################################################
+        - name: List all disks
+          command: lsblk -d -n -o NAME
+          register: disks_output
+          changed_when: false
+
+        ####################################################################
+        # 2. SELECT FIRST NON-OS DISK
+        ####################################################################
+        - name: Build candidate disk list (skip sda, sr0)
+          set_fact:
+            candidate_list: >-
+              {{ disks_output.stdout_lines
+                 | reject('match', '^sda$')
+                 | reject('match', '^sr0$')
+                 | list }}
+
+        - name: Set candidate disk
+          set_fact:
+            candidate_disk: "/dev/{{ candidate_list[0] }}"
+          when: candidate_list | length > 0
+
+        ####################################################################
+        # 3. HANDLE NO DISK CASE
+        ####################################################################
+        - name: Handle no data disk found
+          when: candidate_list | length == 0
+          set_fact:
+            lvm_final_status:
+              failed: false
+              skipped: true
+              msg: "No available data disk found — LVM setup skipped."
+
+        ####################################################################
+        # 4. CONTINUE ONLY IF DISK EXISTS
+        ####################################################################
+        - name: LVM validation and setup
+          when: candidate_list | length > 0
+          block:
+
+            ############################################################
+            # 4.1 CHECK IF DISK BELONGS TO ANY VG
+            ############################################################
+            - name: Detect VG owning the disk
+              command: pvs --noheadings -o vg_name {{ candidate_disk }}
+              register: disk_vg
+              changed_when: false
+              failed_when: false
+
+            - name: Mark disk-in-use case
+              when: disk_vg.stdout | trim != ""
+              set_fact:
+                lvm_final_status:
+                  failed: false
+                  skipped: true
+                  msg: "Disk {{ candidate_disk }} already belongs to VG {{ disk_vg.stdout | trim }} — skipping."
+
+            ############################################################
+            # 4.2 CREATE PV + VG ONLY IF DISK IS FREE
+            ############################################################
+            - name: Create PV and VG when disk is free
+              when: disk_vg.stdout | trim == ""
+              block:
+
+                - name: Check existing PVs
+                  command: pvs --noheadings -o pv_name
+                  register: existing_pvs
+                  changed_when: false
+
+                - name: Create Physical Volume
+                  command: pvcreate {{ candidate_disk }}
+                  when: candidate_disk not in existing_pvs.stdout_lines
+                  register: pvcreate_result
+                  ignore_errors: yes
+
+                - name: Check if VG exists
+                  command: vgs {{ vg_name }} --noheadings
+                  register: vg_exists
+                  changed_when: false
+                  failed_when: false
+
+                - name: Create Volume Group
+                  command: vgcreate {{ vg_name }} {{ candidate_disk }}
+                  when: vg_exists.stdout == ""
+                  register: vgcreate_result
+                  ignore_errors: yes
+
+                - name: Set final LVM result
+                  set_fact:
+                    lvm_final_status:
+                      failed: "{{ (pvcreate_result is defined and pvcreate_result.failed | default(false))
+                                  or (vgcreate_result is defined and vgcreate_result.failed | default(false)) }}"
+                      skipped: false
+                      msg: >-
+                        {% if vg_exists.stdout != "" %}
+                          VG {{ vg_name }} already exists — no changes required.
+                        {% elif pvcreate_result is defined and pvcreate_result.failed | default(false) %}
+                          PV creation failed.
+                        {% elif vgcreate_result is defined and vgcreate_result.failed | default(false) %}
+                          VG creation failed.
+                        {% else %}
+                          PV/VG setup completed successfully on {{ candidate_disk }}.
+                        {% endif %}
+
+      rescue:
+        - set_fact:
+            lvm_final_status:
+              failed: true
+              skipped: false
+              msg: "Unexpected LVM error occurred."
+
+      always:
+        - name: Log LVM setup result
+          import_tasks: log_task_status.yml
+          vars:
+            task_name: "LVM Setup (PV + VG)"
+            task_result: "{{ lvm_final_status }}"
+
+
+
+#==================================================================================##
+# Add SSH keys to authorized_keys
+#==================================================================================##
+
+- name: Add SSH keys to authorized_keys
+  hosts: all
+  become: yes
+  gather_facts: yes
+  tags:
+    - ssh_keys
+
+  tasks:
+    - block:
+        - name: Ensure root .ssh directory exists
+          file:
+            path: /root/.ssh
+            state: directory
+            mode: '0700'
+            owner: root
+            group: root
+
+        - name: copy team SSH keys to authorized_keys
+          copy:
+            src: sandisk_teamkeys/SnDkTeam.keys
+            dest: /root/.ssh/authorized_keys
+            owner: root
+            group: root
+            mode: '0600'
+          register: sshkeys_result
+          
+      rescue:
+        - name: Set failure fact in rescue block
+          set_fact:
+            sshkeys_result: 
+              failed: true
+              msg: "SSH keys addition failed: {{ ansible_failed_result.msg | default('Unknown error') }}"
+
+      always:
+        - name: Log SSH keys addition task
+          import_tasks: log_task_status.yml
+          vars:
+            task_result: "{{ sshkeys_result | default({}) }}"
+            task_name: "SSH Keys Added"
+
+#==================================================================================##
+# Add Sudoers entry for Admin Group
+#==================================================================================##
+
+- name: Add Sudoers entry for Admin Group
+  hosts: all
+  become: yes
+  gather_facts: yes
+  tags:
+    - sudoers_admin_group
+
+  tasks:
+    - block:
+        - name: Ensure admin group exists
+          group:
+            name: sssd_admin
+            state: present
+
+        - name: Add sudoers entry for admin group
+          copy:
+            dest: /etc/sudoers.d/sssd_admin
+            content: |
+              %IT-Infra-Linux-Support-Flash ALL=(ALL:ALL) NOPASSWD: ALL
+              %IT-Infra-Linux-Support ALL=(ALL:ALL) NOPASSWD: ALL
+            owner: root
+            group: root
+            mode: '0440'
+            validate: '/usr/sbin/visudo -cf %s'
+
+      rescue:
+        - name: Handle sudoers configuration failure
+          debug:
+            msg: "Sudoers entry addition failed: {{ ansible_failed_result.msg | default('Unknown error') }}"
+
+
+#==================================================================================##
+# Edit the PAM Configuration for SSHD
+#==================================================================================##
+
+- name: Edit the PAM Configuration for SSHD
+  hosts: all
+  become: yes
+  gather_facts: yes
+  tags:
+    - pam_sshd_modify
+
+  vars:
+    date_suffix: "{{ ansible_date_time.day }}{{ ansible_date_time.month | upper }}{{ ansible_date_time.year }}"
+
+  tasks:
+    - block:
+        - name: Backup existing sshd PAM configuration
+          copy:
+            src: /etc/pam.d/common-session
+            dest: "/etc/pam.d/common-session.bak.{{ date_suffix }}"
+            owner: root
+            group: root
+            mode: '0644'
+            remote_src: yes
+
+        - name: Add pam_mkhomedir.so to common-session
+          lineinfile:
+            path: /etc/pam.d/common-session
+            line: 'session required pam_mkhomedir.so skel=/etc/skel umask=0077'
+            insertafter: EOF
+            state: present
+            backup: yes
+
+      rescue:
+        - name: Handle PAM configuration failure
+          debug:
+            msg: "PAM configuration modification failed: {{ ansible_failed_result.msg | default('Unknown error') }}"
+
+
+#==================================================================================##
+# Install UFW and enable the required ports
+#==================================================================================##
+
+- name: Configure UFW Firewall
+  hosts: all
+  become: yes
+  gather_facts: yes
+  tags:
+    - ufw_setup
+
+  tasks:
+
+    - block:
+
+        #######################################################################
+        # 1. Install ufw package
+        #######################################################################
+        - name: Install UFW
+          apt:
+            name: ufw
+            state: present
+            update_cache: yes
+          register: ufw_install
+          ignore_errors: yes
+
+        #######################################################################
+        # 2. Allow required ports
+        #######################################################################
+        - name: Allow required ports in UFW
+          ufw:
+            rule: allow
+            port: "{{ item }}"
+            proto: tcp
+          loop:
+            - "22"     # SSH
+            - "80"     # HTTP
+            - "443"    # HTTPS
+            - "6556"   # Checkmk agent
+          register: ufw_port_allow
+          ignore_errors: yes
+
+        #######################################################################
+        # 3. Enable UFW
+        #######################################################################
+        - name: Enable UFW
+          ufw:
+            state: enabled
+            logging: "on"
+          register: ufw_enable
+          ignore_errors: yes
+
+        #######################################################################
+        # 4. Verify UFW status
+        #######################################################################
+        - name: Check UFW status
+          command: ufw status verbose
+          register: ufw_status
+          changed_when: false
+          ignore_errors: yes
+
+        - name: Display UFW status
+          debug:
+            var: ufw_status.stdout_lines
+          ignore_errors: yes
+
+      rescue:
+        #######################################################################
+        # 5. Rescue block when UFW fails
+        #######################################################################
+        - name: Handle UFW configuration failure
+          debug:
+            msg: "UFW configuration failed: {{ ansible_failed_result.msg | default('Unknown error') }}"
+          ignore_errors: yes
+
+      always:
+        #######################################################################
+        # 6. Logging (optional)
+        #######################################################################
+        - import_tasks: log_task_status.yml
+          vars:
+            task_result: "{{ ufw_install | default('') }}"
+            task_name: "ufw_setup"
+          ignore_errors: yes
+
+
+#==================================================================================##
+# Modify SSH Configuration
+#==================================================================================##
+
+- name: Modify SSHD configuration to enhance security
+  hosts: all
+  become: yes
+  gather_facts: yes
+  tags:
+    - sshd_config_modify
+
+  vars:
+    date_suffix: "{{ ansible_date_time.day }}{{ ansible_date_time.month | upper }}{{ ansible_date_time.year }}"
+    
+  tasks:
+    - block:
+        - name: Backup existing sshd_config
+          copy:
+            src: /etc/ssh/sshd_config
+            dest: "/etc/ssh/sshd_config.bak.{{ date_suffix }}"
+            owner: root
+            group: root
+            mode: '0644'
+            remote_src: yes
+
+        - name: Ensure PermitRootLogin is set to yes
+          lineinfile:
+            path: /etc/ssh/sshd_config
+            regexp: '^#?PermitRootLogin'
+            line: 'PermitRootLogin yes'
+            backup: yes
+
+        - name: Disable GSSAPI Authentication
+          lineinfile:
+            path: /etc/ssh/sshd_config
+            regexp: '^#?GSSAPIAuthentication'
+            line: 'GSSAPIAuthentication no'
+            backup: yes
+
+        - name: Enable GSSAPI Cleanup Credentials
+          lineinfile:
+            path: /etc/ssh/sshd_config
+            regexp: '^#?GSSAPICleanupCredentials'
+            line: 'GSSAPICleanupCredentials yes'
+            backup: yes
+
+        - name: Restart SSH service to apply changes (Debian/Ubuntu)
+          systemd:
+            name: ssh
+            state: restarted
+          when: ansible_os_family == "Debian"
+
+        - name: Restart SSH service to apply changes (RedHat/CentOS)
+          systemd:
+            name: sshd
+            state: restarted
+          when: ansible_os_family == "RedHat"
+
+      rescue:
+        - name: Handle SSHD configuration failure
+          debug:
+            msg: "SSHD configuration modification failed: {{ ansible_failed_result.msg | default('Unknown error') }}"
+
+
+
+###############################################################################
+# Domain join 
+###############################################################################
+
+- name: Domain join (manual – mark as failed)
+  hosts: all
+  become: true
+  tags:
+    - Domain_join
+
+  tasks:
+
+    - name: Install packages required for AD domain join
+      apt:
+        name:
+          - realmd
+          - sssd
+          - sssd-tools
+          - sssd-ad
+          - adcli
+          - packagekit
+          - krb5-user
+          - samba-common-bin
+          - python3-pexpect
+        state: present
+        update_cache: yes
+      register: domain_pkg_result
+
+    - name: Mark domain join as FAILED (manual action required)
+      import_tasks: log_task_status.yml
+      vars:
+        task_name: "Domain Join"
+        task_result:
+          failed: true
+          msg: "Domain join is a MANUAL step – not executed by automation"
+
+
+########################################################################
+# Send email for each host 
+# version 2
+########################################################################
+
+- name: Send email for each host
+  hosts: localhost
+  gather_facts: no
+
+  vars_files:
+    - vars/OU_vars.yml
+    - vars/e_vars.yml
+    
+  vars:
+    executed_by: "{{ hostvars['localhost'].playbook_executor }}"
+
+  tasks:
+    - name: Read status file for each host
+      set_fact:
+        host_status_lines: >-
+          {{
+            (
+              lookup('file', playbook_dir ~ '/ansible_output/' ~ item ~ '/status.txt', errors='ignore')
+              .splitlines()
+            ) if lookup('file', playbook_dir ~ '/ansible_output/' ~ item ~ '/status.txt', errors='ignore') | length > 0
+            else ['No tasks executed for this host']
+          }}
+      loop: "{{ groups['all'] }}"
+      register: host_statuses
+
+    - name: Send email
+      mail:
+        to: "{{ mail_to }}"
+        from: "{{ mail_from }}"
+        cc: "{{ mail_cc }}"
+        subject: "Playbook Task Status Summary - {{ item.item }}"
+        subtype: html
+        body: "{{ email_html_body }}"
+      loop: "{{ host_statuses.results }}"
